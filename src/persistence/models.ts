@@ -16,5 +16,8 @@ export interface NewCategory {
   gradient: string
 }
 
+/** Editable fields of a category. */
+export type CategoryPatch = Partial<Pick<Category, 'name' | 'gradient'>>
+
 export type { AccentColor, Category, Task }
 

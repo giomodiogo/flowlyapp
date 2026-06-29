@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import type { AccentColor, Category } from '../types'
+import type { AccentColor, Category, Task } from '../types'
 
-interface NewTaskInput {
+export interface TaskFormInput {
   title: string
   color: AccentColor
   categoryId: string | null
 }
 
-interface AddTaskSheetProps {
-  open: boolean
+interface TaskSheetProps {
+  /** When provided, the sheet edits this task; otherwise it creates a new one. */
+  task?: Task | null
   categories: Category[]
   onClose: () => void
-  onAdd: (input: NewTaskInput) => void
+  onSubmit: (input: TaskFormInput) => void
 }
 
 const colorChoices: { value: AccentColor; className: string }[] = [
@@ -21,45 +22,38 @@ const colorChoices: { value: AccentColor; className: string }[] = [
   { value: 'purple', className: 'bg-accent-purple' },
 ]
 
-export function AddTaskSheet({ open, categories, onClose, onAdd }: AddTaskSheetProps) {
-  const [title, setTitle] = useState('')
-  const [color, setColor] = useState<AccentColor>('blue')
-  const [categoryId, setCategoryId] = useState<string | null>(null)
+export function TaskSheet({ task, categories, onClose, onSubmit }: TaskSheetProps) {
+  const [title, setTitle] = useState(task?.title ?? '')
+  const [color, setColor] = useState<AccentColor>(task?.color ?? 'blue')
+  const [categoryId, setCategoryId] = useState<string | null>(
+    task?.categoryId ?? null,
+  )
 
-  if (!open) return null
-
-  const reset = () => {
-    setTitle('')
-    setColor('blue')
-    setCategoryId(null)
-  }
-
-  const close = () => {
-    reset()
-    onClose()
-  }
+  const isEdit = Boolean(task)
 
   const submit = () => {
     const trimmed = title.trim()
     if (!trimmed) return
-    onAdd({ title: trimmed, color, categoryId })
-    close()
+    onSubmit({ title: trimmed, color, categoryId })
+    onClose()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
         className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-        onClick={close}
+        onClick={onClose}
         aria-hidden
       />
 
       <div className="relative w-full max-w-md rounded-t-3xl bg-white p-6 shadow-card sm:rounded-3xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-ink">New task</h2>
+          <h2 className="text-xl font-bold text-ink">
+            {isEdit ? 'Edit task' : 'New task'}
+          </h2>
           <button
             type="button"
-            onClick={close}
+            onClick={onClose}
             aria-label="Close"
             className="grid h-9 w-9 place-items-center rounded-full bg-canvas text-ink transition active:scale-95"
           >
@@ -132,7 +126,7 @@ export function AddTaskSheet({ open, categories, onClose, onAdd }: AddTaskSheetP
           disabled={!title.trim()}
           className="mt-6 w-full rounded-2xl bg-accent py-3.5 text-[16px] font-bold text-white shadow-fab transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
         >
-          Add task
+          {isEdit ? 'Save changes' : 'Add task'}
         </button>
       </div>
     </div>

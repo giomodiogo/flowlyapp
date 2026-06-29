@@ -1,6 +1,7 @@
 import type { PersistenceAdapter } from '../adapter'
 import type {
   Category,
+  CategoryPatch,
   NewCategory,
   NewTask,
   Task,
@@ -71,6 +72,18 @@ export class LocalStorageAdapter implements PersistenceAdapter {
     )
   }
 
+  async reorderTasks(orderedIds: string[]): Promise<void> {
+    const tasks = await this.getTasks()
+    const byId = new Map(tasks.map((task) => [task.id, task]))
+    const ordered = orderedIds
+      .map((id) => byId.get(id))
+      .filter((task): task is Task => task !== undefined)
+    for (const task of tasks) {
+      if (!orderedIds.includes(task.id)) ordered.push(task)
+    }
+    this.write(TASKS_KEY, ordered)
+  }
+
   async getCategories(): Promise<Category[]> {
     return this.read<Category[]>(CATEGORIES_KEY) ?? []
   }
@@ -86,6 +99,49 @@ export class LocalStorageAdapter implements PersistenceAdapter {
     const categories = await this.getCategories()
     this.write(CATEGORIES_KEY, [...categories, category])
     return category
+  }
+
+  async updateCategory(id: string, patch: CategoryPatch): Promise<Category> {
+    const categories = await this.getCategories()
+    let updated: Category | undefined
+    const next = categories.map((category) => {
+      if (category.id !== id) return category
+      updated = { ...category, ...patch }
+      return updated
+    })
+    if (!updated) throw new Error(`Category ${id} not found.`)
+    this.write(CATEGORIES_KEY, next)
+    return updated
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    const categories = await this.getCategories()
+    this.write(
+      CATEGORIES_KEY,
+      categories.filter((category) => category.id !== id),
+    )
+
+    // Detach tasks that referenced the removed category.
+    const tasks = await this.getTasks()
+    this.write(
+      TASKS_KEY,
+      tasks.map((task) =>
+        task.categoryId === id ? { ...task, categoryId: null } : task,
+      ),
+    )
+  }
+
+  async reorderCategories(orderedIds: string[]): Promise<void> {
+    const categories = await this.getCategories()
+    const byId = new Map(categories.map((category) => [category.id, category]))
+    const ordered = orderedIds
+      .map((id) => byId.get(id))
+      .filter((category): category is Category => category !== undefined)
+    // Keep any category that wasn't part of the requested order.
+    for (const category of categories) {
+      if (!orderedIds.includes(category.id)) ordered.push(category)
+    }
+    this.write(CATEGORIES_KEY, ordered)
   }
 
   private read<T>(key: string): T | null {

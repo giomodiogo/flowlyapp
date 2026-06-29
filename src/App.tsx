@@ -1,36 +1,76 @@
 import { useState } from 'react'
 import { BottomNav } from './components/BottomNav'
 import { Sidebar } from './components/Sidebar'
-import { AddTaskSheet } from './components/AddTaskSheet'
-import { AddCategorySheet } from './components/AddCategorySheet'
+import { TaskSheet, type TaskFormInput } from './components/TaskSheet'
+import { ManageCategories } from './components/ManageCategories'
+import type { CategoryFormInput } from './components/CategorySheet'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { PomodoroTimer } from './components/PomodoroTimer'
 import { Home } from './pages/Home'
 import { Calendar } from './pages/Calendar'
 import { Analytics } from './pages/Analytics'
 import { Profile } from './pages/Profile'
 import { usePersistence } from './persistence'
-import type { AccentColor, TabId } from './types'
+import type { TabId, Task } from './types'
 
 const USER_NAME = 'Joy'
 
 export default function App() {
   const [tab, setTab] = useState<TabId>('home')
   const [taskSheetOpen, setTaskSheetOpen] = useState(false)
-  const [categorySheetOpen, setCategorySheetOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false)
   const [pomodoroOpen, setPomodoroOpen] = useState(false)
 
-  const { tasks, categories, toggleTask, addTask, addCategory } = usePersistence()
+  const {
+    tasks,
+    categories,
+    toggleTask,
+    addTask,
+    updateTask,
+    deleteTask,
+    reorderTasks,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
+  } = usePersistence()
 
   const handleToggleTask = (id: string) => void toggleTask(id)
 
-  const handleAddTask = (input: {
-    title: string
-    color: AccentColor
-    categoryId: string | null
-  }) => void addTask(input)
+  const openAddTask = () => {
+    setEditingTask(null)
+    setTaskSheetOpen(true)
+  }
 
-  const handleAddCategory = (input: { name: string; gradient: string }) =>
-    void addCategory(input)
+  const openEditTask = (task: Task) => {
+    setEditingTask(task)
+    setTaskSheetOpen(true)
+  }
+
+  const handleSubmitTask = (input: TaskFormInput) => {
+    if (editingTask) {
+      void updateTask(editingTask.id, input)
+    } else {
+      void addTask(input)
+    }
+  }
+
+  const confirmDeleteTask = () => {
+    if (deletingTask) void deleteTask(deletingTask.id)
+    setDeletingTask(null)
+  }
+
+  const handleAddCategory = (input: CategoryFormInput) => void addCategory(input)
+
+  const handleUpdateCategory = (id: string, patch: CategoryFormInput) =>
+    void updateCategory(id, patch)
+
+  const handleDeleteCategory = (id: string) => void deleteCategory(id)
+
+  const handleReorderCategories = (orderedIds: string[]) =>
+    void reorderCategories(orderedIds)
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-canvas">
@@ -45,8 +85,11 @@ export default function App() {
                 categories={categories}
                 tasks={tasks}
                 onToggleTask={handleToggleTask}
-                onAddCategory={() => setCategorySheetOpen(true)}
-                onAddTask={() => setTaskSheetOpen(true)}
+                onEditTask={openEditTask}
+                onDeleteTask={setDeletingTask}
+                onReorderTasks={(ids) => void reorderTasks(ids)}
+                onManageCategories={() => setManageCategoriesOpen(true)}
+                onAddTask={openAddTask}
               />
             )}
             {tab === 'calendar' && <Calendar tasks={tasks} />}
@@ -60,17 +103,35 @@ export default function App() {
         <BottomNav active={tab} onChange={setTab} onPomodoro={() => setPomodoroOpen(true)} />
       </div>
 
-      <AddTaskSheet
-        open={taskSheetOpen}
-        categories={categories}
-        onClose={() => setTaskSheetOpen(false)}
-        onAdd={handleAddTask}
-      />
+      {taskSheetOpen && (
+        <TaskSheet
+          key={editingTask?.id ?? 'new'}
+          task={editingTask}
+          categories={categories}
+          onClose={() => setTaskSheetOpen(false)}
+          onSubmit={handleSubmitTask}
+        />
+      )}
 
-      <AddCategorySheet
-        open={categorySheetOpen}
-        onClose={() => setCategorySheetOpen(false)}
-        onAdd={handleAddCategory}
+      {manageCategoriesOpen && (
+        <ManageCategories
+          categories={categories}
+          onClose={() => setManageCategoriesOpen(false)}
+          onAdd={handleAddCategory}
+          onUpdate={handleUpdateCategory}
+          onDelete={handleDeleteCategory}
+          onReorder={handleReorderCategories}
+        />
+      )}
+
+      <ConfirmDialog
+        open={deletingTask !== null}
+        title="Delete task"
+        message={`Are you sure you want to delete "${deletingTask?.title ?? ''}"? This can't be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDeleteTask}
+        onCancel={() => setDeletingTask(null)}
       />
 
       <PomodoroTimer

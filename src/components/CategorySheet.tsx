@@ -1,55 +1,51 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { categoryThemes } from './categoryThemes'
+import type { Category } from '../types'
 
-interface NewCategoryInput {
+export interface CategoryFormInput {
   name: string
   gradient: string
 }
 
-interface AddCategorySheetProps {
-  open: boolean
+interface CategorySheetProps {
+  /** When provided, the sheet edits this category; otherwise it creates one. */
+  category?: Category | null
   onClose: () => void
-  onAdd: (input: NewCategoryInput) => void
+  onSubmit: (input: CategoryFormInput) => void
 }
 
-export function AddCategorySheet({ open, onClose, onAdd }: AddCategorySheetProps) {
-  const [name, setName] = useState('')
-  const [gradient, setGradient] = useState(categoryThemes[0].gradient)
+export function CategorySheet({ category, onClose, onSubmit }: CategorySheetProps) {
+  const [name, setName] = useState(category?.name ?? '')
+  const [gradient, setGradient] = useState(
+    category?.gradient ?? categoryThemes[0].gradient,
+  )
 
-  if (!open) return null
-
-  const reset = () => {
-    setName('')
-    setGradient(categoryThemes[0].gradient)
-  }
-
-  const close = () => {
-    reset()
-    onClose()
-  }
+  const isEdit = Boolean(category)
 
   const submit = () => {
     const trimmed = name.trim()
     if (!trimmed) return
-    onAdd({ name: trimmed, gradient })
-    close()
+    onSubmit({ name: trimmed, gradient })
+    onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
       <div
         className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-        onClick={close}
+        onClick={onClose}
         aria-hidden
       />
 
       <div className="relative w-full max-w-md rounded-t-3xl bg-white p-6 shadow-card sm:rounded-3xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-ink">New category</h2>
+          <h2 className="text-xl font-bold text-ink">
+            {isEdit ? 'Edit category' : 'New category'}
+          </h2>
           <button
             type="button"
-            onClick={close}
+            onClick={onClose}
             aria-label="Close"
             className="grid h-9 w-9 place-items-center rounded-full bg-canvas text-ink transition active:scale-95"
           >
@@ -96,7 +92,7 @@ export function AddCategorySheet({ open, onClose, onAdd }: AddCategorySheetProps
           disabled={!name.trim()}
           className="mt-6 w-full rounded-2xl bg-accent py-3.5 text-[16px] font-bold text-white shadow-fab transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
         >
-          Add category
+          {isEdit ? 'Save changes' : 'Add category'}
         </button>
       </div>
     </div>

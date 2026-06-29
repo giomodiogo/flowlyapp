@@ -1,5 +1,12 @@
 export type { PersistenceAdapter } from './adapter'
-export type { Category, NewCategory, NewTask, Task, TaskPatch } from './models'
+export type {
+  Category,
+  CategoryPatch,
+  NewCategory,
+  NewTask,
+  Task,
+  TaskPatch,
+} from './models'
 export { createPersistence, persistence } from './createPersistence'
 export { usePersistence } from './usePersistence'
 export { SqliteAdapter } from './sqlite/sqliteAdapter'

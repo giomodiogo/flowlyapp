@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Category, NewCategory, NewTask, Task } from './models'
+import type {
+  Category,
+  CategoryPatch,
+  NewCategory,
+  NewTask,
+  Task,
+  TaskPatch,
+} from './models'
 import { persistence } from './createPersistence'
 
 interface PersistenceState {
@@ -8,9 +15,14 @@ interface PersistenceState {
   loading: boolean
   error: Error | null
   addTask: (input: NewTask) => Promise<void>
+  updateTask: (id: string, patch: TaskPatch) => Promise<void>
   toggleTask: (id: string) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+  reorderTasks: (orderedIds: string[]) => Promise<void>
   addCategory: (input: NewCategory) => Promise<void>
+  updateCategory: (id: string, patch: CategoryPatch) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
+  reorderCategories: (orderedIds: string[]) => Promise<void>
   reload: () => Promise<void>
 }
 
@@ -75,6 +87,11 @@ export function usePersistence(): PersistenceState {
     setTasks((prev) => [created, ...prev])
   }, [])
 
+  const updateTask = useCallback(async (id: string, patch: TaskPatch) => {
+    const updated = await persistence.updateTask(id, patch)
+    setTasks((prev) => prev.map((task) => (task.id === id ? updated : task)))
+  }, [])
+
   const toggleTask = useCallback(async (id: string) => {
     // Optimistic flip, then reconcile with what the adapter returns.
     setTasks((prev) =>
@@ -96,9 +113,56 @@ export function usePersistence(): PersistenceState {
     setTasks((prev) => prev.filter((task) => task.id !== id))
   }, [])
 
+  const reorderTasks = useCallback(async (orderedIds: string[]) => {
+    setTasks((prev) => {
+      const byId = new Map(prev.map((task) => [task.id, task]))
+      const ordered = orderedIds
+        .map((id) => byId.get(id))
+        .filter((task): task is Task => task !== undefined)
+      for (const task of prev) {
+        if (!orderedIds.includes(task.id)) ordered.push(task)
+      }
+      return ordered
+    })
+    await persistence.reorderTasks(orderedIds)
+  }, [])
+
   const addCategory = useCallback(async (input: NewCategory) => {
     const created = await persistence.addCategory(input)
     setRawCategories((prev) => [...prev, created])
+  }, [])
+
+  const updateCategory = useCallback(async (id: string, patch: CategoryPatch) => {
+    const updated = await persistence.updateCategory(id, patch)
+    setRawCategories((prev) =>
+      prev.map((category) => (category.id === id ? updated : category)),
+    )
+  }, [])
+
+  const deleteCategory = useCallback(async (id: string) => {
+    await persistence.deleteCategory(id)
+    setRawCategories((prev) => prev.filter((category) => category.id !== id))
+    // Mirror the adapter's cascade: detach affected tasks locally.
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.categoryId === id ? { ...task, categoryId: null } : task,
+      ),
+    )
+  }, [])
+
+  const reorderCategories = useCallback(async (orderedIds: string[]) => {
+    // Optimistically apply the new order, then persist.
+    setRawCategories((prev) => {
+      const byId = new Map(prev.map((category) => [category.id, category]))
+      const ordered = orderedIds
+        .map((id) => byId.get(id))
+        .filter((category): category is Category => category !== undefined)
+      for (const category of prev) {
+        if (!orderedIds.includes(category.id)) ordered.push(category)
+      }
+      return ordered
+    })
+    await persistence.reorderCategories(orderedIds)
   }, [])
 
   return {
@@ -107,9 +171,14 @@ export function usePersistence(): PersistenceState {
     loading,
     error,
     addTask,
+    updateTask,
     toggleTask,
     deleteTask,
+    reorderTasks,
     addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
     reload,
   }
 }

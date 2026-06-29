@@ -7,6 +7,7 @@ import type { PersistenceAdapter } from '../adapter'
 import type {
   AccentColor,
   Category,
+  CategoryPatch,
   NewCategory,
   NewTask,
   Task,
@@ -23,6 +24,7 @@ interface TaskRow {
   done: number
   color: string
   category_id: string | null
+  position: number
 }
 
 interface CategoryRow {
@@ -31,6 +33,7 @@ interface CategoryRow {
   task_count: number
   progress: number
   gradient: string
+  position: number
 }
 
 function rowToTask(row: TaskRow): Task {
@@ -85,6 +88,7 @@ export class SqliteAdapter implements PersistenceAdapter {
 
     await this.db.open()
     await this.createSchema()
+    await this.migrate()
     await this.seedIfEmpty()
   }
 
@@ -102,25 +106,55 @@ export class SqliteAdapter implements PersistenceAdapter {
         title       TEXT NOT NULL,
         done        INTEGER NOT NULL DEFAULT 0,
         color       TEXT NOT NULL,
-        category_id TEXT
+        category_id TEXT,
+        position    INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS categories (
         id         TEXT PRIMARY KEY NOT NULL,
         name       TEXT NOT NULL,
         task_count INTEGER NOT NULL DEFAULT 0,
         progress   INTEGER NOT NULL DEFAULT 0,
-        gradient   TEXT NOT NULL
+        gradient   TEXT NOT NULL,
+        position   INTEGER NOT NULL DEFAULT 0
       );
     `)
+  }
+
+  /** Adds columns that were introduced after the first release, if missing. */
+  private async migrate(): Promise<void> {
+    await this.addColumnIfMissing('categories')
+    await this.addColumnIfMissing('tasks')
+  }
+
+  private async addColumnIfMissing(table: 'tasks' | 'categories'): Promise<void> {
+    const info = await this.connection.query(`PRAGMA table_info(${table});`)
+    const columns = (info.values as { name: string }[] | undefined ?? []).map(
+      (c) => c.name,
+    )
+    if (!columns.includes('position')) {
+      await this.connection.execute(
+        `ALTER TABLE ${table} ADD COLUMN position INTEGER NOT NULL DEFAULT 0;`,
+      )
+      // Seed positions from current insertion order for existing rows.
+      await this.connection.execute(`UPDATE ${table} SET position = rowid;`)
+    }
   }
 
   private async seedIfEmpty(): Promise<void> {
     const tasks = await this.connection.query('SELECT COUNT(*) AS count FROM tasks;')
     if ((tasks.values?.[0]?.count ?? 0) === 0) {
-      for (const task of initialTasks) {
+      for (let index = 0; index < initialTasks.length; index += 1) {
+        const task = initialTasks[index]
         await this.connection.run(
-          'INSERT INTO tasks (id, title, done, color, category_id) VALUES (?, ?, ?, ?, ?);',
-          [task.id, task.title, task.done ? 1 : 0, task.color, task.categoryId],
+          'INSERT INTO tasks (id, title, done, color, category_id, position) VALUES (?, ?, ?, ?, ?, ?);',
+          [
+            task.id,
+            task.title,
+            task.done ? 1 : 0,
+            task.color,
+            task.categoryId,
+            index,
+          ],
         )
       }
     }
@@ -129,15 +163,17 @@ export class SqliteAdapter implements PersistenceAdapter {
       'SELECT COUNT(*) AS count FROM categories;',
     )
     if ((categories.values?.[0]?.count ?? 0) === 0) {
-      for (const category of initialCategories) {
+      for (let index = 0; index < initialCategories.length; index += 1) {
+        const category = initialCategories[index]
         await this.connection.run(
-          'INSERT INTO categories (id, name, task_count, progress, gradient) VALUES (?, ?, ?, ?, ?);',
+          'INSERT INTO categories (id, name, task_count, progress, gradient, position) VALUES (?, ?, ?, ?, ?, ?);',
           [
             category.id,
             category.name,
             category.taskCount,
             category.progress,
             category.gradient,
+            index,
           ],
         )
       }
@@ -145,7 +181,9 @@ export class SqliteAdapter implements PersistenceAdapter {
   }
 
   async getTasks(): Promise<Task[]> {
-    const result = await this.connection.query('SELECT * FROM tasks ORDER BY rowid DESC;')
+    const result = await this.connection.query(
+      'SELECT * FROM tasks ORDER BY position ASC, rowid ASC;',
+    )
     return (result.values as TaskRow[] | undefined ?? []).map(rowToTask)
   }
 
@@ -157,11 +195,25 @@ export class SqliteAdapter implements PersistenceAdapter {
       color: input.color,
       categoryId: input.categoryId ?? null,
     }
+    // New tasks go to the top of the list (lowest position).
+    const min = await this.connection.query(
+      'SELECT COALESCE(MIN(position), 0) AS min FROM tasks;',
+    )
+    const position = ((min.values?.[0]?.min as number | undefined) ?? 0) - 1
     await this.connection.run(
-      'INSERT INTO tasks (id, title, done, color, category_id) VALUES (?, ?, ?, ?, ?);',
-      [task.id, task.title, 0, task.color, task.categoryId],
+      'INSERT INTO tasks (id, title, done, color, category_id, position) VALUES (?, ?, ?, ?, ?, ?);',
+      [task.id, task.title, 0, task.color, task.categoryId, position],
     )
     return task
+  }
+
+  async reorderTasks(orderedIds: string[]): Promise<void> {
+    for (let index = 0; index < orderedIds.length; index += 1) {
+      await this.connection.run('UPDATE tasks SET position = ? WHERE id = ?;', [
+        index,
+        orderedIds[index],
+      ])
+    }
   }
 
   async updateTask(id: string, patch: TaskPatch): Promise<Task> {
@@ -206,7 +258,9 @@ export class SqliteAdapter implements PersistenceAdapter {
   }
 
   async getCategories(): Promise<Category[]> {
-    const result = await this.connection.query('SELECT * FROM categories;')
+    const result = await this.connection.query(
+      'SELECT * FROM categories ORDER BY position ASC, rowid ASC;',
+    )
     return (result.values as CategoryRow[] | undefined ?? []).map(rowToCategory)
   }
 
@@ -218,11 +272,67 @@ export class SqliteAdapter implements PersistenceAdapter {
       progress: 0,
       gradient: input.gradient,
     }
+    const max = await this.connection.query(
+      'SELECT COALESCE(MAX(position), -1) AS max FROM categories;',
+    )
+    const position = ((max.values?.[0]?.max as number | undefined) ?? -1) + 1
     await this.connection.run(
-      'INSERT INTO categories (id, name, task_count, progress, gradient) VALUES (?, ?, ?, ?, ?);',
-      [category.id, category.name, 0, 0, category.gradient],
+      'INSERT INTO categories (id, name, task_count, progress, gradient, position) VALUES (?, ?, ?, ?, ?, ?);',
+      [category.id, category.name, 0, 0, category.gradient, position],
     )
     return category
+  }
+
+  async reorderCategories(orderedIds: string[]): Promise<void> {
+    for (let index = 0; index < orderedIds.length; index += 1) {
+      await this.connection.run(
+        'UPDATE categories SET position = ? WHERE id = ?;',
+        [index, orderedIds[index]],
+      )
+    }
+  }
+
+  async updateCategory(id: string, patch: CategoryPatch): Promise<Category> {
+    const fields: string[] = []
+    const values: (string | number)[] = []
+
+    if (patch.name !== undefined) {
+      fields.push('name = ?')
+      values.push(patch.name)
+    }
+    if (patch.gradient !== undefined) {
+      fields.push('gradient = ?')
+      values.push(patch.gradient)
+    }
+
+    if (fields.length > 0) {
+      values.push(id)
+      await this.connection.run(
+        `UPDATE categories SET ${fields.join(', ')} WHERE id = ?;`,
+        values,
+      )
+    }
+
+    return this.requireCategory(id)
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    // Detach tasks first so none point at a missing category.
+    await this.connection.run(
+      'UPDATE tasks SET category_id = NULL WHERE category_id = ?;',
+      [id],
+    )
+    await this.connection.run('DELETE FROM categories WHERE id = ?;', [id])
+  }
+
+  private async requireCategory(id: string): Promise<Category> {
+    const result = await this.connection.query(
+      'SELECT * FROM categories WHERE id = ? LIMIT 1;',
+      [id],
+    )
+    const row = (result.values as CategoryRow[] | undefined)?.[0]
+    if (!row) throw new Error(`Category ${id} not found.`)
+    return rowToCategory(row)
   }
 
   private async requireTask(id: string): Promise<Task> {

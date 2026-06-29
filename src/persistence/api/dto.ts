@@ -1,4 +1,10 @@
-import type { AccentColor, Category, NewCategory, Task } from '../models'
+import type {
+  AccentColor,
+  Category,
+  CategoryPatch,
+  NewCategory,
+  Task,
+} from '../models'
 
 /**
  * Wire formats returned by the remote API. These intentionally differ from the
@@ -47,11 +53,13 @@ export function taskToDTO(task: Partial<Task>): Partial<TaskDTO> {
   return dto
 }
 
-export function categoryToDTO(category: NewCategory): Partial<CategoryDTO> {
-  return {
-    label: category.name,
-    theme: category.gradient,
-  }
+export function categoryToDTO(
+  category: NewCategory | CategoryPatch,
+): Partial<CategoryDTO> {
+  const dto: Partial<CategoryDTO> = {}
+  if (category.name !== undefined) dto.label = category.name
+  if (category.gradient !== undefined) dto.theme = category.gradient
+  return dto
 }
 
 export function categoryFromDTO(dto: CategoryDTO): Category {

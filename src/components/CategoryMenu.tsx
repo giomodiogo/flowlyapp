@@ -1,11 +1,11 @@
-import { Plus } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import type { Category } from '../types'
 
 interface CategoryMenuProps {
   categories: Category[]
   selectedId: string | null
   onSelect: (id: string | null) => void
-  onAdd: () => void
+  onManage: () => void
 }
 
 const chipBase =
@@ -15,7 +15,7 @@ export function CategoryMenu({
   categories,
   selectedId,
   onSelect,
-  onAdd,
+  onManage,
 }: CategoryMenuProps) {
   return (
     <div className="no-scrollbar -mx-6 flex items-center gap-2 overflow-x-auto px-6 lg:-mx-10 lg:px-10">
@@ -58,11 +58,11 @@ export function CategoryMenu({
 
       <button
         type="button"
-        onClick={onAdd}
-        aria-label="Add category"
+        onClick={onManage}
+        aria-label="Manage categories"
         className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-accent shadow-card transition active:scale-95"
       >
-        <Plus className="h-5 w-5" strokeWidth={2.6} />
+        <SlidersHorizontal className="h-5 w-5" strokeWidth={2.4} />
       </button>
     </div>
   )

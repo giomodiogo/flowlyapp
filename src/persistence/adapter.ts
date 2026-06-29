@@ -1,4 +1,11 @@
-import type { Category, NewCategory, NewTask, Task, TaskPatch } from './models'
+import type {
+  Category,
+  CategoryPatch,
+  NewCategory,
+  NewTask,
+  Task,
+  TaskPatch,
+} from './models'
 
 /**
  * Storage-agnostic contract for everything the app needs to persist.
@@ -19,7 +26,17 @@ export interface PersistenceAdapter {
   updateTask(id: string, patch: TaskPatch): Promise<Task>
   toggleTask(id: string): Promise<Task>
   deleteTask(id: string): Promise<void>
+  /** Persists a new ordering for the tasks, given their ids in order. */
+  reorderTasks(orderedIds: string[]): Promise<void>
 
   getCategories(): Promise<Category[]>
   addCategory(input: NewCategory): Promise<Category>
+  updateCategory(id: string, patch: CategoryPatch): Promise<Category>
+  /**
+   * Removes a category. Tasks that referenced it become uncategorised
+   * (their `categoryId` is set to null).
+   */
+  deleteCategory(id: string): Promise<void>
+  /** Persists a new ordering for the categories, given their ids in order. */
+  reorderCategories(orderedIds: string[]): Promise<void>
 }

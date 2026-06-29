@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { CategoryMenu } from '../components/CategoryMenu'
 import { Header } from '../components/Header'
 import { TaskItem } from '../components/TaskItem'
+import { useSortable } from '../components/useSortable'
 import type { Category, Task } from '../types'
 
 interface HomeProps {
@@ -10,7 +11,10 @@ interface HomeProps {
   categories: Category[]
   tasks: Task[]
   onToggleTask: (id: string) => void
-  onAddCategory: () => void
+  onEditTask: (task: Task) => void
+  onDeleteTask: (task: Task) => void
+  onReorderTasks: (orderedIds: string[]) => void
+  onManageCategories: () => void
   onAddTask: () => void
 }
 
@@ -22,7 +26,10 @@ export function Home({
   categories,
   tasks,
   onToggleTask,
-  onAddCategory,
+  onEditTask,
+  onDeleteTask,
+  onReorderTasks,
+  onManageCategories,
   onAddTask,
 }: HomeProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -37,6 +44,30 @@ export function Home({
 
   const activeCategory = categories.find((c) => c.id === selectedCategoryId)
 
+  // When a filter is active, splice the reordered visible tasks back into the
+  // full list so hidden tasks keep their place.
+  const handleReorderVisible = (visibleOrderedIds: string[]) => {
+    if (selectedCategoryId === null) {
+      onReorderTasks(visibleOrderedIds)
+      return
+    }
+    const visibleIds = new Set(visibleTasks.map((t) => t.id))
+    let cursor = 0
+    const fullOrder = tasks.map((task) => {
+      if (!visibleIds.has(task.id)) return task.id
+      const id = visibleOrderedIds[cursor]
+      cursor += 1
+      return id
+    })
+    onReorderTasks(fullOrder)
+  }
+
+  const {
+    list: orderedTasks,
+    dragId,
+    start: startTaskDrag,
+  } = useSortable(visibleTasks, handleReorderVisible)
+
   return (
     <div className="pb-10">
       <Header name={name} />
@@ -49,7 +80,7 @@ export function Home({
               categories={categories}
               selectedId={selectedCategoryId}
               onSelect={setSelectedCategoryId}
-              onAdd={onAddCategory}
+              onManage={onManageCategories}
             />
           </div>
         </section>
@@ -58,11 +89,19 @@ export function Home({
           <h2 className={sectionTitle}>
             {activeCategory ? `${activeCategory.name} tasks` : "Today's tasks"}
           </h2>
-          <ul className="mt-4 grid gap-3 xl:grid-cols-2">
-            {visibleTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onToggle={onToggleTask} />
+          <ul className="mt-4 grid gap-3">
+            {orderedTasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onToggle={onToggleTask}
+                onEdit={onEditTask}
+                onDelete={onDeleteTask}
+                onDragStart={startTaskDrag}
+                dragging={dragId === task.id}
+              />
             ))}
-            {visibleTasks.length === 0 && (
+            {orderedTasks.length === 0 && (
               <li className="rounded-3xl bg-white px-5 py-8 text-center text-sm font-medium text-muted shadow-card">
                 {selectedCategoryId === null
                   ? 'No tasks yet. Tap + to add one.'

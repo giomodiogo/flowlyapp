@@ -1,5 +1,12 @@
 import type { PersistenceAdapter } from '../adapter'
-import type { Category, NewCategory, NewTask, Task, TaskPatch } from '../models'
+import type {
+  Category,
+  CategoryPatch,
+  NewCategory,
+  NewTask,
+  Task,
+  TaskPatch,
+} from '../models'
 import {
   categoryFromDTO,
   categoryToDTO,
@@ -68,6 +75,10 @@ export class ApiAdapter implements PersistenceAdapter {
     await this.request<void>('DELETE', `/tasks/${encodeURIComponent(id)}`)
   }
 
+  async reorderTasks(orderedIds: string[]): Promise<void> {
+    await this.request<void>('POST', '/tasks/reorder', { ids: orderedIds })
+  }
+
   async getCategories(): Promise<Category[]> {
     const dtos = await this.request<CategoryDTO[]>('GET', '/categories')
     return dtos.map(categoryFromDTO)
@@ -80,6 +91,23 @@ export class ApiAdapter implements PersistenceAdapter {
       categoryToDTO(input),
     )
     return categoryFromDTO(dto)
+  }
+
+  async updateCategory(id: string, patch: CategoryPatch): Promise<Category> {
+    const dto = await this.request<CategoryDTO>(
+      'PATCH',
+      `/categories/${encodeURIComponent(id)}`,
+      categoryToDTO(patch),
+    )
+    return categoryFromDTO(dto)
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await this.request<void>('DELETE', `/categories/${encodeURIComponent(id)}`)
+  }
+
+  async reorderCategories(orderedIds: string[]): Promise<void> {
+    await this.request<void>('POST', '/categories/reorder', { ids: orderedIds })
   }
 
   private async request<T>(
