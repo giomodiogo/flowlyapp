@@ -1,14 +1,14 @@
-import { Plus } from 'lucide-react'
+import { Timer } from 'lucide-react'
 import type { TabId } from '../types'
 import { navItems } from './navItems'
 
 interface SidebarProps {
   active: TabId
   onChange: (tab: TabId) => void
-  onAdd: () => void
+  onPomodoro: () => void
 }
 
-export function Sidebar({ active, onChange, onAdd }: SidebarProps) {
+export function Sidebar({ active, onChange, onPomodoro }: SidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200/70 bg-white px-5 py-7 lg:flex">
       <div className="flex items-center gap-2 px-2">
@@ -44,11 +44,11 @@ export function Sidebar({ active, onChange, onAdd }: SidebarProps) {
 
       <button
         type="button"
-        onClick={onAdd}
+        onClick={onPomodoro}
         className="mt-auto flex items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-[15px] font-bold text-white shadow-fab transition hover:brightness-105 active:scale-[0.98]"
       >
-        <Plus className="h-5 w-5" strokeWidth={2.6} />
-        New task
+        <Timer className="h-5 w-5" strokeWidth={2.6} />
+        Pomodoro
       </button>
     </aside>
   )

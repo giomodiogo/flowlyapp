@@ -1,11 +1,11 @@
-import { Plus } from 'lucide-react'
+import { Timer } from 'lucide-react'
 import type { TabId } from '../types'
 import { navItems, type NavItem } from './navItems'
 
 interface BottomNavProps {
   active: TabId
   onChange: (tab: TabId) => void
-  onAdd: () => void
+  onPomodoro: () => void
 }
 
 function NavButton({
@@ -30,17 +30,17 @@ function NavButton({
   )
 }
 
-export function BottomNav({ active, onChange, onAdd }: BottomNavProps) {
+export function BottomNav({ active, onChange, onPomodoro }: BottomNavProps) {
   return (
     <nav className="relative bg-white px-4 pb-3 pt-3 shadow-nav lg:hidden">
-      {/* Floating action button */}
+      {/* Center action button — opens the Pomodoro timer */}
       <button
         type="button"
-        onClick={onAdd}
-        aria-label="Add task"
+        onClick={onPomodoro}
+        aria-label="Open Pomodoro timer"
         className="absolute -top-7 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-accent text-white shadow-fab transition active:scale-95"
       >
-        <Plus className="h-7 w-7" strokeWidth={2.6} />
+        <Timer className="h-7 w-7" strokeWidth={2.6} />
       </button>
 
       <div className="flex items-center">

@@ -3,6 +3,7 @@ import { BottomNav } from './components/BottomNav'
 import { Sidebar } from './components/Sidebar'
 import { AddTaskSheet } from './components/AddTaskSheet'
 import { AddCategorySheet } from './components/AddCategorySheet'
+import { PomodoroTimer } from './components/PomodoroTimer'
 import { Home } from './pages/Home'
 import { Calendar } from './pages/Calendar'
 import { Analytics } from './pages/Analytics'
@@ -16,6 +17,7 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('home')
   const [taskSheetOpen, setTaskSheetOpen] = useState(false)
   const [categorySheetOpen, setCategorySheetOpen] = useState(false)
+  const [pomodoroOpen, setPomodoroOpen] = useState(false)
 
   const { tasks, categories, toggleTask, addTask, addCategory } = usePersistence()
 
@@ -32,7 +34,7 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-canvas">
-      <Sidebar active={tab} onChange={setTab} onAdd={() => setTaskSheetOpen(true)} />
+      <Sidebar active={tab} onChange={setTab} onPomodoro={() => setPomodoroOpen(true)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="no-scrollbar flex-1 overflow-y-auto">
@@ -44,6 +46,7 @@ export default function App() {
                 tasks={tasks}
                 onToggleTask={handleToggleTask}
                 onAddCategory={() => setCategorySheetOpen(true)}
+                onAddTask={() => setTaskSheetOpen(true)}
               />
             )}
             {tab === 'calendar' && <Calendar tasks={tasks} />}
@@ -54,7 +57,7 @@ export default function App() {
           </div>
         </main>
 
-        <BottomNav active={tab} onChange={setTab} onAdd={() => setTaskSheetOpen(true)} />
+        <BottomNav active={tab} onChange={setTab} onPomodoro={() => setPomodoroOpen(true)} />
       </div>
 
       <AddTaskSheet
@@ -68,6 +71,11 @@ export default function App() {
         open={categorySheetOpen}
         onClose={() => setCategorySheetOpen(false)}
         onAdd={handleAddCategory}
+      />
+
+      <PomodoroTimer
+        open={pomodoroOpen}
+        onClose={() => setPomodoroOpen(false)}
       />
     </div>
   )
