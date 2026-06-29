@@ -5,6 +5,8 @@ export interface Task {
   title: string
   done: boolean
   color: AccentColor
+  /** Category this task belongs to, or null when uncategorised. */
+  categoryId: string | null
 }
 
 export interface Category {

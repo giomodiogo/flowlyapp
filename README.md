@@ -25,6 +25,12 @@ bottom navigation bar with a central floating "+" button.
 ## Getting started (Web)
 
 ```bash
+
+# node
+nvm list
+nvm use v24.15.0
+
+#app
 npm install
 npm run dev      # start the dev server at http://localhost:5173
 npm run build    # type-check + production build into dist/

@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import type { AccentColor } from '../types'
+import type { AccentColor, Category } from '../types'
+
+interface NewTaskInput {
+  title: string
+  color: AccentColor
+  categoryId: string | null
+}
 
 interface AddTaskSheetProps {
   open: boolean
+  categories: Category[]
   onClose: () => void
-  onAdd: (title: string, color: AccentColor) => void
+  onAdd: (input: NewTaskInput) => void
 }
 
 const colorChoices: { value: AccentColor; className: string }[] = [
@@ -14,15 +21,17 @@ const colorChoices: { value: AccentColor; className: string }[] = [
   { value: 'purple', className: 'bg-accent-purple' },
 ]
 
-export function AddTaskSheet({ open, onClose, onAdd }: AddTaskSheetProps) {
+export function AddTaskSheet({ open, categories, onClose, onAdd }: AddTaskSheetProps) {
   const [title, setTitle] = useState('')
   const [color, setColor] = useState<AccentColor>('blue')
+  const [categoryId, setCategoryId] = useState<string | null>(null)
 
   if (!open) return null
 
   const reset = () => {
     setTitle('')
     setColor('blue')
+    setCategoryId(null)
   }
 
   const close = () => {
@@ -33,7 +42,7 @@ export function AddTaskSheet({ open, onClose, onAdd }: AddTaskSheetProps) {
   const submit = () => {
     const trimmed = title.trim()
     if (!trimmed) return
-    onAdd(trimmed, color)
+    onAdd({ title: trimmed, color, categoryId })
     close()
   }
 
@@ -83,6 +92,39 @@ export function AddTaskSheet({ open, onClose, onAdd }: AddTaskSheetProps) {
             />
           ))}
         </div>
+
+        {categories.length > 0 && (
+          <div className="mt-5">
+            <span className="text-sm font-semibold text-muted">Category</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryId(null)}
+                className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                  categoryId === null
+                    ? 'bg-accent text-white'
+                    : 'bg-canvas text-muted'
+                }`}
+              >
+                None
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setCategoryId(category.id)}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                    categoryId === category.id
+                      ? 'bg-accent text-white'
+                      : 'bg-canvas text-muted'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           type="button"
