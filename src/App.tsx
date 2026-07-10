@@ -76,8 +76,8 @@ export default function App() {
     <div className="flex h-[100dvh] w-full overflow-hidden bg-canvas">
       <Sidebar active={tab} onChange={setTab} onPomodoro={() => setPomodoroOpen(true)} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <main className="no-scrollbar flex-1 overflow-y-auto">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main className="no-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <div className="mx-auto w-full max-w-6xl">
             {tab === 'home' && (
               <Home

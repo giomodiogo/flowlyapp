@@ -12,6 +12,9 @@ html,
 body,
 #root {
   height: 100%;
+  /* Never let content scroll the page sideways on a device. */
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {

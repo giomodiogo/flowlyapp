@@ -69,7 +69,7 @@ export function Home({
   } = useSortable(visibleTasks, handleReorderVisible)
 
   return (
-    <div className="pb-10">
+    <div className="pb-28 lg:pb-32">
       <Header name={name} />
 
       <div className="mt-7 px-6 lg:mt-9 lg:px-10">
@@ -89,7 +89,7 @@ export function Home({
           <h2 className={sectionTitle}>
             {activeCategory ? `${activeCategory.name} tasks` : "Today's tasks"}
           </h2>
-          <ul className="mt-4 grid gap-3">
+          <ul className="mt-4 flex flex-col gap-3">
             {orderedTasks.map((task) => (
               <TaskItem
                 key={task.id}

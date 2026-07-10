@@ -18,7 +18,7 @@ export function CategoryMenu({
   onManage,
 }: CategoryMenuProps) {
   return (
-    <div className="no-scrollbar -mx-6 flex items-center gap-2 overflow-x-auto px-6 lg:-mx-10 lg:px-10">
+    <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto">
       <button
         type="button"
         onClick={() => onSelect(null)}
